@@ -1,0 +1,250 @@
+/***********************************************************************
+ * XOR Cipher  ***********************************************************************/ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h> 
+#include <limits.h> 
+#include <assert.h>
+#include <string.h>   
+ 
+#define MAXLEN 10 /*change the value to utilize the program for a message which has length shorter/longer than 15 characters*/ 
+#define bits_per_byte 8
+
+/*********************Function Declarations*********************/  
+unsigned int get_seed (void);
+size_t read_text(char buffer[MAXLEN]);
+size_t bits_in_mask (long int mask); 
+unsigned int countBits(unsigned int n); 
+void extract_each_byte (long int key, char bytes_in_key [], size_t chars_per_key);
+void encrypt (char buffer[], size_t len);
+void encrypt_one_key_per_character (char buffer[], size_t len); 
+void encrypt_multiple_characters_per_key (char buffer[], size_t len);
+void encrypt_multiple_characters_with_one_XOR (char buffer[], size_t len);
+/*************************************************************/
+
+
+#ifndef NOMAIN
+int
+main (void)
+{
+  char buf[MAXLEN+1];           /* Include space for the null terminator */
+  buf[MAXLEN] = '\0';           /*Null Terminator for end of the buffer */ 
+  srandom (get_seed());         /* Initialize the RNG with a given key */
+  size_t len = read_text(buf);  /* Read the text into buf to be ciphered */
+  encrypt (buf, len);           /* Encrypt exactly len values in the buffer */
+  for (int c=0 ; c < len ; c++){ /* Print ciphered values by chars because */
+  printf ("%c",buf[c]);} /* the null terminator could appear within */
+  printf ("\n"); 
+} // main
+#endif
+
+
+
+/*Procedure:get_seed (void) 
+ 
+**Purpose: Gets the seed for srandom function from the user 
+ 
+**Returns: (unsigned int) seed obtained from the user 
+  
+**Preconditions: none
+  
+**Postconditions: The returned seed should be a single positive integer number 
+*/ 
+unsigned int get_seed (void)
+{
+ int input_number; /*inut_number stores the number inputted by the user*/
+ int correct_input = 0; /*correct_input is a flag to check wether the line inputted by user is correct*/ 
+  while (correct_input == 0) 
+  {
+    scanf("%d", &input_number);  
+    if (input_number < 0)
+    {
+    printf ("INVALID INPUT!\n Enter Again\n"); 
+    correct_input = 1; 
+    }//if 
+    else {
+    correct_input = 1;  
+    }//else
+    }/*while loops until the user input is correct*/ 
+   return (unsigned int) input_number; 
+   }//get_seed
+
+
+
+/*Procedure: read_text(char buffer [MAXLEN])
+ 
+**Purpose: Reads the input for ecnryption/decryption from the user and stores it in the array buffer 
+ 
+**Returns: (size_t) number of characters input by the user 
+  
+**Preconditions: buffer should be an array with which can hold MAXLEN+1 characters (including the null terminator) 
+  
+**Postconditions: read_text should correctly read the text entered by the user and update buffer with those characters; read_text should return the number of characters input by the user 
+                  if the character entered by the user is unreadable, read_text should correctly store empty character ' ' in the array buffer for that position 
+*/ 
+size_t read_text(char buffer[MAXLEN])   
+{
+ char ch; /*stores character read from the user*/ 
+ size_t index = 0; /*tracks the number of characters read*/ 
+ ch = getchar(); /* Get rid of new line*/
+ 
+ while (((ch=getchar()) != EOF) || (index <  MAXLEN)){
+        if (ch == '\n'){  
+        break;  
+    } 
+   if (ferror (stdin))  
+    {
+        buffer [index] = ' '; /*stores empty character in buffer in there is error in reading input*/ 
+    }//if 
+    else  
+    {
+    buffer [index] = ch; /*store the character in the buffer*/ 
+    }//else
+  index = index + 1 ; /*increment index*/ 
+  }/*while : loops as long as buffer isn't full or end of file is reached*/ 
+  //printf("%s", buffer);
+ return index; 
+ }//read_text   
+
+
+
+/*Procedure: bits_in_mask (long int mask) 
+ 
+**Purpose: Count the number of bits that are set in the long int variable 'mask' 
+ 
+**Returns: Total number of bits that are set (i.e 1) in the variable 'mask' 
+  
+**Preconditions: mask should be long int 
+  
+**Postconditions: bits_in_mask should correctly return the total number of 1 bits in the in the long int variable 'mask'
+*/ 
+size_t bits_in_mask (long int mask)
+{
+   size_t number_of_1s = 0; /*stores the number of bits that are 1 in mask*/ 
+   while (mask) /*loops through all bits in the mask*/ 
+   {
+    number_of_1s += mask & 1; /*if the current bit being analyzed is 1, number_of_1s increments*/ 
+    mask >>= 1; /*right shift bits of mask by 1*/ 
+   }//while 
+   return number_of_1s;   
+   }//bits_in_mask 
+
+
+
+/*Procedure: encrypt (char buffer [], size_t len) 
+ 
+**Purpose: Encrypts/Decrypts the characters stored in the array buffer [] using three approaches: 
+           -Encrypting one character per key 
+           -Encrypting multiple characters per key 
+           -Encryping multiple characters per key with an algorithm that requires a fewer XOR operator
+ 
+**Returns: nothing  
+  
+**Preconditions: len should be positive and store the number of characters read from the user input 
+                 buffer should be MAXLEN+1 capacity and store that text that is to be encrypted/decrypted                  
+  
+**Postconditions: encrypt should update the buffer with correctly encrypted characters using either of the approaches described above  
+                  (or decrypted characters if encrypted characters were originally stored in buffer while calling encrypt) 
+*/ 
+
+void encrypt (char buffer[], size_t len) 
+{
+  //encrypt_one_key_per_character(buffer, len); /*Uncomment this to use the first approach */ 
+  encrypt_multiple_characters_per_key (buffer, len);
+  
+}//encrypt
+
+
+
+/*Procedure:encrypt_one_key_per_character (char buffer [], size_t len) 
+ 
+**Purpose: Uses XOR encryption algorithm to encrypts each character using a uique key  
+ 
+**Returns: nothing 
+  
+**Preconditions: len should be positive and store the number of characters read from the user input 
+                 buffer should be MAXLEN+1 capacity and store that text that is to be encrypted/decrypted 
+  
+**Postconditions: encrypt_one_key_per_character should update the buffer with correctly encrypted characters using XOR cipher algorithm 
+                 'OR''if' encrypted characters were originally stored in buffer while calling encrypt_one_key_per_character, 
+                          encrypt_one_key_per_character should update the buffer with correctly decryped characters using XOR cipher algorithm 
+*/ 
+void encrypt_one_key_per_character (char buffer[], size_t len)
+{
+char least_significant_byte; 
+int position_of_least_significant_byte; 
+long int key; 
+for (int i = 0; i < len; i++)
+{
+assert (RAND_MAX < LONG_MAX); /*assert that argument to random is positive (when signed) so that the leading/leftmost bit is always zero*/ 
+key = random(); 
+position_of_least_significant_byte = (sizeof(key)*bits_per_byte) - bits_per_byte; 
+least_significant_byte = (key & 0xFF);  //((key>>position_of_least_significant_byte)&0xFF); /*Extract least significant byte of the key*/ 
+buffer[i] = buffer[i] ^ least_significant_byte; /*XOR each bit of the character stored in buffer[i] with the least significant byte of the random key*/ 
+}//for 
+}//Approach 1
+
+
+
+/*Procedure: encrypt_multiple_characters_per_key (char buffer[], size_t len)
+ 
+**Purpose: -encrypts/decrypts the characters in buffer using C's bitwise XOR operator to do the encryption/decryption by 
+           -generating a key 
+           -repeatedly using the appropriate number of bits off the key to encrypt/decrypt characters from buffer until all bits from the key are used 
+           -generating a new key 
+           -Repeating the process until all the characters in buffer are encrypted/decrypted 
+ 
+**Returns: nothing 
+  
+**Preconditions: len should be positive and store the number of characters read from the user input 
+                 buffer should be MAXLEN+1 capacity and store that text that is to be encrypted/decrypted 
+  
+**Postconditions: encrypt_one_key_per_character should update the buffer with correctly encrypted characters using algorithm that encrypts multiple characters per key 
+                 'OR''if' encrypted characters were originally stored in buffer while calling encrypt_multiple_characters_per_key, 
+                          encrypt_one_key_per_character should update the buffer with correctly decryped characters using the algorithm that decrypts multiple characters per key 
+*/
+
+void encrypt_multiple_characters_per_key (char buffer[], size_t len)
+{
+int index = 0;
+long int key = 0;
+int max_chars_XORed;  
+while (index < len)
+{
+key = random ();
+max_chars_XORed =  bits_in_mask ((long)RAND_MAX) / bits_per_byte; /*Maxium characters that can be XORed with given key */
+  for (size_t i = 0; i < max_chars_XORed; ++i) {
+  unsigned char current_byte = *((unsigned char *)&key + i);
+  buffer[index] = buffer[index] ^ current_byte;
+  index = index + 1;
+}//for
+}//while
+}//Approach 2
+ 
+
+
+
+/*
+References: 
+used to learn the method to extract each byte from int:
+https://www.includehelp.com/c-programs/extract-bytes-from-int.asp
+https://www.avrfreaks.net/forum/c-programming-how-split-int16-bits-2-char8bit
+https://stackoverflow.com/questions/15255692/grabbing-n-bits-from-a-byte
+https://stackoverflow.com/questions/3784263/converting-an-int-into-a-4-byte-char-array-c
+https://stackoverflow.com/questions/7787423/c-get-nth-byte-of-integer
+https://codereview.stackexchange.com/questions/69204/function-to-extract-bytes-as-a-decimal
+used to understand how to count the number of set bits using C: 
+https://www.geeksforgeeks.org/count-set-bits-in-an-integer/
+
+used to understand the blueprint of the algorithm 
+https://www.cs.grinnell.edu/~weinman/courses/CSC161/2019S/homework/xor-cipher.shtml 
+
+Help obtained
+Prof. Jerod Weinman at Grinnell College to understand different methods of reading input in C */ 
+
+
+
+
+
+
+
